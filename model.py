@@ -87,3 +87,9 @@ class HulaHoopLSTM:
         self.net.eval()
         logits= self.net(torch.Tensor(x))
         return logits.detach().cpu().numpy()
+    
+    def evaluate(self, x: np.ndarray, y: np.ndarray):
+        self.net.eval()
+        y_pred = self.net(torch.Tensor(x))
+        loss = self.criterion(y_pred, torch.Tensor(y))
+        return loss.item()      

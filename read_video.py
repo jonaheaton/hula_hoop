@@ -132,8 +132,8 @@ if __name__ == '__main__':
     parser.add_argument('-iv', '--input_video', type=str, help='The path to the input video file', default=DEFAULT_INPUT_VIDEO)
     parser.add_argument('-od', '--output_data', type=str,help='The path to the output data file', default=DEFAULT_OUTPUT_FILE)
     parser.add_argument('-ov', '--output_video', type=str, help='The path to the saved output video file', default=DEFAULT_OUTPUT_VIDEO)
-    parser.add_argument('-sf', '--start_frame', type=int, help='The frame number to start processing from', default=20)
-    parser.add_argument('-mf', '--max_frames', type=int, help='The maximum number of frames to process', default=10)
+    parser.add_argument('-sf', '--start_frame', type=int, help='The frame number to start processing from', default=100)
+    parser.add_argument('-mf', '--max_frames', type=int, help='The maximum number of frames to process', default=600)
 
 
     args = parser.parse_args()
