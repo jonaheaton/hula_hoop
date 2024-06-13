@@ -6,6 +6,10 @@ import matplotlib.pyplot as plt
 import colorsys
 import trackpy as tp
 import pandas as pd
+from sklearn.preprocessing import MinMaxScaler
+
+#############################################
+########## Basic Image Processing ##########
 
 def display_channels(image):
     # Split the image into its color channels
@@ -28,7 +32,6 @@ def display_channels(image):
     plt.show()
 
 
-
 def convert_frame_to_rgb(frame):
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
@@ -43,6 +46,23 @@ def split_frame(frame):
     return top_half, bottom_half
 
 
+def overlay_mask(image, mask, color=(0, 255, 0), alpha=0.5):
+    # Ensure the mask is a grayscale image
+    assert len(mask.shape) == 2
+
+    # Create a 3-channel version of the mask
+    mask_color = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
+
+    # Set the color of the mask
+    mask_color[mask != 0] = color
+
+    # Blend the original image with the color mask
+    overlay = cv2.addWeighted(image, 1 - alpha, mask_color, alpha, 0)
+
+    return overlay
+
+#############################################
+########## Hula Hoop Mask Image Processing ##########
 
 def get_orange_hoop_mask(img):
     # Define the lower and upper boundaries for the color orange in the RGB color space
@@ -111,6 +131,10 @@ def get_full_hoop_mask(img):
     hoop_mask = cv2.bitwise_or(orange_mask, hoop_markers)
     return hoop_mask
 
+#############################################
+######### Extract Mask Measurements (coordinates, area, etc) #########
+
+
 def get_center_of_mass(mask):
     '''
     Find the center of mass of the mask
@@ -142,6 +166,23 @@ def get_area_of_mask(mask):
     return cv2.countNonZero(mask)
 
 
+def get_object_centroids(mask):
+    '''
+    Find the centroids of the connected components in the mask
+    '''
+    num_labels, labels, stats, centroids = get_connected_components(mask)
+    return centroids[1:]
+
+def get_object_centroids_and_areas(mask):
+    '''
+    Find the centroids and areas of the connected components in the mask
+    '''
+    num_labels, labels, stats, centroids = get_connected_components(mask)
+    return centroids[1:], stats[1:, cv2.CC_STAT_AREA]
+
+#############################################
+############## Edit Mask ################
+
 def remove_large_connected_components(mask, max_area):
     '''
     Remove connected components that are larger than the max area
@@ -162,22 +203,6 @@ def remove_small_connected_components(mask, min_area):
             mask[labels == i] = 0
     return mask
 
-
-def get_object_centroids(mask):
-    '''
-    Find the centroids of the connected components in the mask
-    '''
-    num_labels, labels, stats, centroids = get_connected_components(mask)
-    return centroids[1:]
-
-def get_object_centroids_and_areas(mask):
-    '''
-    Find the centroids and areas of the connected components in the mask
-    '''
-    num_labels, labels, stats, centroids = get_connected_components(mask)
-    return centroids[1:], stats[1:, cv2.CC_STAT_AREA]
-
-
 def remove_stationay_objects(mask, bad_centroids=None, dist_th=50):
     '''
     Remove connected components that are smaller than the min area and have centroids close to the bad centroids
@@ -197,6 +222,9 @@ def remove_stationay_objects(mask, bad_centroids=None, dist_th=50):
                 break
 
     return mask
+
+#############################################
+############# Fit Ellipse to Mask #############
 
 def fit_circle_to_disjoint_masks(mask):
     circles = cv2.HoughCircles(mask, cv2.HOUGH_GRADIENT, dp=10, minDist=200, param1=300, param2=0.95, minRadius=80, maxRadius=100)
@@ -252,22 +280,8 @@ def find_near_ellipse_markers(image, ellipse, thickness=20,min_area=20):
     return mask
 
 
-
-def overlay_mask(image, mask, color=(0, 255, 0), alpha=0.5):
-    # Ensure the mask is a grayscale image
-    assert len(mask.shape) == 2
-
-    # Create a 3-channel version of the mask
-    mask_color = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
-
-    # Set the color of the mask
-    mask_color[mask != 0] = color
-
-    # Blend the original image with the color mask
-    overlay = cv2.addWeighted(image, 1 - alpha, mask_color, alpha, 0)
-
-    return overlay
-
+#############################################
+######### Particle Tracking #########
 
 def particle_num_to_rgb(num, max_particles):
     '''
@@ -313,3 +327,19 @@ def link_top_bottom_markers(top_markers, bottom_markers, top_ellipse, bottom_ell
     linked_markers = tp.link_df(df, search_range=min_dist, memory=1)
 
     return linked_markers
+
+#############################################
+######### LSTM Preprocessing #########
+
+def create_sequences(data, timesteps):
+    X = []
+    y = []
+    for i in range(len(data) - timesteps):
+        X.append(data[i:i+timesteps,:])
+        y.append(data[i+timesteps,:])
+    return np.array(X), np.array(y)
+
+def get_data_scaler(data):
+    scaler = MinMaxScaler()
+    scaler.fit(data)
+    return scaler

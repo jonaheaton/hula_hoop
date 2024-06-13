@@ -1,6 +1,6 @@
 # read multiple 
 import os
-from read_video import main as main_read_video
+from video import main as main_read_video
 from prep_data import main as main_prep_data
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
