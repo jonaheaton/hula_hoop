@@ -121,6 +121,7 @@ class HulaHoopLSTM:
                  output_size: int=1, dropout: float=0.0,
                  learning_rate: float=1e-3,
                  weight_decay: float=1e-5,
+                 device: Optional[str] = None,
                  data_scaler: Optional[MinMaxScaler] = None):
         """
         Initialize the HulaHoopLSTM model.
@@ -143,6 +144,11 @@ class HulaHoopLSTM:
         self.optimizer = self._get_optimizer()
         self.criterion = self._get_criterion()
         self.data_scaler = data_scaler
+        if device is None:
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        else:
+            self.device = torch.device(device)
+        self.net.to(self.device)
 
     def _get_optimizer(self) -> torch.optim.Optimizer:
         """
@@ -174,10 +180,11 @@ class HulaHoopLSTM:
         Returns:
         - torch.Tensor: The average train loss for the epoch.
         """
-        self.net.train()
         total_loss = 0
         for batch in dataloader:
             x, y = batch
+            x = x.to(self.device)
+            y = y.to(self.device)
             self.optimizer.zero_grad()
             y_pred = self.net(x)
             loss = self.criterion(y_pred, y)
@@ -222,6 +229,7 @@ class HulaHoopLSTM:
 
         dataset = torch.utils.data.TensorDataset(torch.Tensor(x), torch.Tensor(y))
         dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        self.net.train()
         for current_epoch in range(num_epoch):
             loss = self._train_one_epoch(dataloader)
             if current_epoch % 10 == 0:
@@ -240,7 +248,9 @@ class HulaHoopLSTM:
         x = self._reshape_and_scale_data(x)
         self.net.eval()
         with torch.inference_mode():
-            logits = self.net(torch.Tensor(x))
+            x = torch.tensor(x, dtype=torch.float32)
+            x = x.to(self.device)
+            logits = self.net(x)
         y = logits.clone().detach().cpu().numpy()
         if self.data_scaler is not None:
             y = self.data_scaler.inverse_transform(y)
@@ -265,6 +275,7 @@ class HulaHoopLSTM:
             x = x.unsqueeze(0)
         with torch.inference_mode():
             for i in range(num_steps):
+                x = x.to(self.device)
                 y_pred = self.net(x)
                 y_generated.append(y_pred.clone().detach().cpu().numpy())
                 x = torch.cat([x[:, 1:, :], y_pred.unsqueeze(0)], dim=1)
