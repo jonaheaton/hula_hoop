@@ -331,13 +331,32 @@ def link_top_bottom_markers(top_markers, bottom_markers, top_ellipse, bottom_ell
 #############################################
 ######### LSTM Preprocessing #########
 
-def create_sequences(data, timesteps):
+def create_sequences(data, timesteps, frames=None, remove_nans=True):
     X = []
     y = []
+    t = []
+    if frames is None:
+        frames = range(data.shape[1])
     for i in range(len(data) - timesteps):
-        X.append(data[i:i+timesteps,:])
-        y.append(data[i+timesteps,:])
-    return np.array(X), np.array(y)
+        if frames[i+timesteps] - frames[i] == timesteps:
+                X.append(data[i:i+timesteps,:])
+                y.append(data[i+timesteps,:])
+                t.append(frames[i+timesteps])
+        # X.append(data[i:i+timesteps,:])
+        # y.append(data[i+timesteps,:])
+
+    X = np.array(X)
+    y = np.array(y)
+    t = np.array(t)
+
+    if remove_nans:
+        # drop the data with nan values
+        nan_idx = np.isnan(X).any(axis=1).any(axis=1) | np.isnan(y).any(axis=1)
+        X = X[~nan_idx,:]
+        y = y[~nan_idx]
+        t = t[~nan_idx]
+
+    return X, y, t
 
 def get_data_scaler(data):
     scaler = MinMaxScaler()

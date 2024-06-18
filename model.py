@@ -32,15 +32,18 @@ class LSTMModule(torch.nn.Module):
 
     """
 
-    def __init__(self, input_size, hidden_size=32, num_layers=1, output_size=1):
+    def __init__(self, input_size, hidden_size=32, 
+                 num_layers=1, output_size=1,dropout=0.0):
         super().__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.output_size = output_size
+        self.dropout= dropout
         self.lstm = torch.nn.LSTM(input_size=input_size, 
                                   hidden_size=hidden_size, 
                                   num_layers=num_layers, 
+                                  dropout=self.dropout,
                                   batch_first=True)
         self.linear = torch.nn.Linear(in_features=hidden_size, 
                                       out_features=output_size)
@@ -78,6 +81,9 @@ class HulaHoopLSTM:
     - hidden_size (int): The number of features in the hidden state h.
     - num_layers (int): Number of recurrent layers. Default is 1.
     - output_size (int): The number of output features. Default is 1.
+    - dropout (float): The dropout rate. Default is 0.0.
+    - learning_rate (float): The learning rate for training. Default is 1e-3.
+    - weight_decay (float): The weight decay for training. Default is 1e-5.
     - data_scaler (Optional[MinMaxScaler]): An optional data scaler to normalize the input data.
 
     Attributes:
@@ -85,6 +91,9 @@ class HulaHoopLSTM:
     - hidden_size (int): The number of features in the hidden state h.
     - num_layers (int): Number of recurrent layers.
     - output_size (int): The number of output features.
+    - dropout (float): The dropout rate.
+    - learning_rate (float): The learning rate for training.
+    - weight_decay (float): The weight decay for training.
     - net (LSTMModule): The LSTM module used for prediction.
     - optimizer (torch.optim.Optimizer): The optimizer used for training.
     - criterion (torch.nn.Module): The loss function used for training.
@@ -109,7 +118,10 @@ class HulaHoopLSTM:
     """
 
     def __init__(self, input_size: int=1, hidden_size: int=32, num_layers: int=1,
-                 output_size: int=1, data_scaler: Optional[MinMaxScaler] = None):
+                 output_size: int=1, dropout: float=0.0,
+                 learning_rate: float=1e-3,
+                 weight_decay: float=1e-5,
+                 data_scaler: Optional[MinMaxScaler] = None):
         """
         Initialize the HulaHoopLSTM model.
 
@@ -124,7 +136,10 @@ class HulaHoopLSTM:
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.output_size = output_size
-        self.net = LSTMModule(input_size, hidden_size, num_layers, output_size)
+        self.dropout = dropout
+        self.learning_rate = learning_rate
+        self.weight_decay = weight_decay
+        self.net = LSTMModule(input_size, hidden_size, num_layers, output_size, dropout)
         self.optimizer = self._get_optimizer()
         self.criterion = self._get_criterion()
         self.data_scaler = data_scaler
@@ -136,7 +151,9 @@ class HulaHoopLSTM:
         Returns:
         - torch.optim.Optimizer: The optimizer for training the model.
         """
-        return torch.optim.AdamW(self.net.parameters(), lr=1e-3, weight_decay=1e-5)
+        return torch.optim.AdamW(self.net.parameters(), 
+                                 lr=self.learning_rate, 
+                                 weight_decay=self.weight_decay)
 
     def _get_criterion(self) -> torch.nn.Module:
         """

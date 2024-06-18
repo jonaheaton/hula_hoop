@@ -49,6 +49,7 @@ def get_hula_hoop_coord(raw_data_path):
     return df
 
 
+# prep for lstm is now defunct, don't use it
 def prep_for_lstm(input_df,
                     yes_plot=False,
                     train_frac=0.7,
